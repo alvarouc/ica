@@ -1,2 +1,2 @@
 # ica
-Independent component analysis
+Implements INFOMAX for Independent component analysis
