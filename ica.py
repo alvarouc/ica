@@ -19,22 +19,6 @@ def PCAwhiten(X,Ncomp):
     Xwhite = v
     return (Xwhite,white,dewhite)
 
-def backtracking(cost, gradient, p, x):
-    x = x.ravel()
-    p = p.ravel()
-    # Line search algorithm as in page 37 of Nocedal's book
-    alpha = 1e6
-    c1 = 1e-4
-    c2 = 0.9
-    rho = 0.5
-    while(cost(x+alpha*p)>cost(x)+c1*alpha*np.dot(gradient(x).ravel().T,p) ): 
-        alpha = alpha * rho
-    return(alpha)    
-
-def cov(A1,A2):
-    C12 = np.dot((A1-A1.mean(axis=0)).T,A2-A2.mean(axis=0)) / (A1.shape[0]-1)
-    return(C12)
-
 def entropy(W,X,bias):
     U = np.dot(W,X) + np.dot(bias, np.ones(shape=(1,X.shape[1])))
     Y = 1 / (1 + np.exp(-U))
@@ -104,7 +88,7 @@ def infomax1(Xwhite, verbose = False):
     step=1
     
     while (step<MAX_STEP):
-        # Shuffle variable order at each step
+
         (W,bias,error,lrate) = indUpdate(W,Xwhite,bias,lrate,startW)
         if error==0:
             
