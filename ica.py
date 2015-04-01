@@ -28,12 +28,6 @@ def PCAwhiten(X,Ncomp, verbose = False):
     Xwhite = v
     return (Xwhite,white,dewhite)
 
-def entropy(W,X,bias):
-    U = np.dot(W,X) + np.dot(bias, np.ones(shape=(1,X.shape[1])))
-    Y = 1 / (1 + np.exp(-U))
-    return(np.mean( np.log( np.abs( np.dot(W,Y*(1-Y)) ) + eps ) ) )
-
-
 def indUpdate(W1,Xwhite1,bias1,lrate1, startW1):
     
     Nvox1 = Xwhite1.shape[1]
