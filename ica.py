@@ -32,7 +32,7 @@ def indUpdate(W1,Xwhite1,bias1,lrate1, startW1):
     """ Update rule for infomax
     This function recieves parameters to update W1 
     * Input 
-    W1: square mixing matrix
+    W1: unmixing matrix (must be a square matrix)
     Xwhite1: whitened data
     bias1: current estimated bias
     lrate1: current learning rate
@@ -89,7 +89,16 @@ def indUpdate(W1,Xwhite1,bias1,lrate1, startW1):
 
 # infomax1: single modality infomax
 def infomax1(Xwhite, verbose = False):
-    "Computes ICA infomax in whitened data"
+    """Computes ICA infomax in whitened data
+    Decomposes Xwhite as Xwhite=AS
+    *Input
+    Xwhite: whitened data (Use PCAwhiten)
+    verbose: flag to print optimization updates
+    *Output
+    A : mixing matrix
+    S : source matrix
+    W : unmixing matrix 
+    """
     Ncomp = Xwhite.shape[0]
     # Initialization
     W = np.eye(Ncomp)

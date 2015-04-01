@@ -1,2 +1,5 @@
-# ica
-Implements INFOMAX for Independent component analysis
+# Independent Component Analysis
+
+Python version of INFOMAX Independent component
+analysis. Ported from
+http://sccn.ucsd.edu/~scott/ica.html
