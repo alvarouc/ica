@@ -7,10 +7,19 @@ MAX_STEP = 500
 MIN_LRATE = 1e-6
 W_STOP = 1e-6
 ## Common functions
-def PCAwhiten(X,Ncomp):
-    "Whitens X with Ncomp components"
+def PCAwhiten(X,Ncomp, verbose = False):
+    """ data Whitening 
+    *Input 
+    X : 2d data matrix of observations by variables
+    Ncomp: Number of components to retain 
+    *Output 
+    Xwhite : Whitened X
+    white : whitening matrix (Xwhite = np.dot(white,X))
+    dewhite : dewhitening matrix (X = np.dot(dewhite,Xwhite))
+    """
     u, s, v = np.linalg.svd(X,full_matrices=False)
-    print("%.2f%% retained variance"%(100*(sum(s[:Ncomp])/sum(s))))
+    if verbose: 
+        print("PCA whitening: %.2f%% retained variance"%(100*(sum(s[:Ncomp])/sum(s))))
     u = u[:,:Ncomp]
     v = v[:Ncomp,:]
     s = s[:Ncomp]
