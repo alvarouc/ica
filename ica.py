@@ -29,7 +29,20 @@ def PCAwhiten(X,Ncomp, verbose = False):
     return (Xwhite,white,dewhite)
 
 def indUpdate(W1,Xwhite1,bias1,lrate1, startW1):
-    
+    """ Update rule for infomax
+    This function recieves parameters to update W1 
+    * Input 
+    W1: square mixing matrix
+    Xwhite1: whitened data
+    bias1: current estimated bias
+    lrate1: current learning rate
+    startW1: in case update blows up it will start again from startW1
+    * Output
+    W1: updated mixing matrix
+    bias: updated bias
+    error1: flag to indicate if any error occurred while upating
+    lrate1: updated learning rate
+    """
     Nvox1 = Xwhite1.shape[1]
     Ncomp1 = Xwhite1.shape[0]
     block1 = int(np.floor(np.sqrt(Nvox1/3)))
@@ -74,8 +87,6 @@ def indUpdate(W1,Xwhite1,bias1,lrate1, startW1):
     return(W1,bias1,error1,lrate1) 
 
 
-######################################################################
-## INFOMAX versions
 # infomax1: single modality infomax
 def infomax1(Xwhite, verbose = False):
     "Computes ICA infomax in whitened data"
