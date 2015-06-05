@@ -16,8 +16,28 @@ MAX_STEP = 500
 MIN_LRATE = 1e-6
 W_STOP = 1e-6
 
-# Common functions
+# Scikit-learn like wrapper
+class ica:
+    def __init__(n_comp=10):
+        self.mix = None
+        self.sources = None
+        self.unmix = None
+        self.n_comp = n_comp
+        
+    def fit(x2d, n_comp):
+        self.mix, self.sources, self.unmix = ica1(x2d, self.n_comp)
 
+    def transform(x2d):
+        if not self.unmix:
+            print('Run fit method first')
+        else:
+            x_white, white, dewhite = pca_whiten(x2d, n_comp, verbose=False):
+            unmixed = dot(self.unmix, x_white)
+            return unmixed
+    def fit_transform(x2d):
+        fit(x2d, self.n_comp)
+        return(self.mix, self.sources)
+    
 
 def pca_whiten(x2d, n_comp, verbose=False):
     """ data Whitening
