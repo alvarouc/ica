@@ -31,7 +31,7 @@ class ica:
         if not self.unmix:
             print('Run fit method first')
         else:
-            x_white, white, dewhite = pca_whiten(x2d, n_comp, verbose=False):
+            x_white, white, dewhite = pca_whiten(x2d, n_comp, verbose=False)
             unmixed = dot(self.unmix, x_white)
             return unmixed
     def fit_transform(x2d):
