@@ -23,7 +23,7 @@ class ica:
         self.sources = None
         self.unmix = None
         self.n_comp = n_comp
-        
+
     def fit(x2d, n_comp):
         self.mix, self.sources, self.unmix = ica1(x2d, self.n_comp)
 
@@ -37,7 +37,7 @@ class ica:
     def fit_transform(x2d):
         fit(x2d, self.n_comp)
         return(self.mix, self.sources)
-    
+
 
 def pca_whiten(x2d, n_comp, verbose=False):
     """ data Whitening
@@ -49,6 +49,7 @@ def pca_whiten(x2d, n_comp, verbose=False):
     white : whitening matrix (Xwhite = np.dot(white,X))
     dewhite : dewhitening matrix (X = np.dot(dewhite,Xwhite))
     """
+    x2d = x2d - x2d.mean(axis=0)
     x_u, x_s, x_v = svd(x2d, full_matrices=False)
     if verbose:
         print "PCA whitening: %.2f%% retained variance" % \
