@@ -193,3 +193,48 @@ def ica1(x_raw, ncomp, verbose=True):
     if verbose:
         print "Done."
     return (mixer, sources)
+
+
+def icax(x_raw, ncomp, verbose=True):
+    
+    if verbose:
+        print "Whitening data..."
+    x_white, _, dewhite = pca_whiten(x_raw, ncomp)
+
+    mixer_list = []
+    sources_list = []
+    for it in range(10):
+        if verbose:
+            print 'Run number %d'%it
+            print "Running INFOMAX-ICA ..."
+        mixer, sources, _ = infomax1(x_white, verbose)
+        mixer_list.append(mixer)
+        sources_list.append(sources)
+
+    # Reorder all sources to the order of the first 
+    S1 = sources_list[0]
+    for it in range(1,10):
+        S2 = sources_list[it]
+        A2 = mixer_list[it]
+        cor_m = np.corrcoef(S1, S2)[:ncomp,ncomp:]
+        idx = np.argmax(np.abs(cor_m), axis=1)
+        S2 = S2[idx,:]
+        A2 = A2[:,idx]
+        cor_m = np.corrcoef(S1, S2)[:ncomp,ncomp:]
+        S2 = S2 * np.sign(np.diag(cor_m)).reshape((ncomp,1))
+        A2 = A2 * np.sign(np.diag(cor_m)).reshape((1,ncomp))
+        sources_list[it] = S2
+        mixer_list[it] = A2
+
+    # Average sources
+    temp_sources = np.zeros(sources.shape)
+    temp_mixer = np.zeros(mixer.shape)
+    for sources, mixer in zip(sources_list, mixer_list):
+        temp_sources = temp_sources + sources
+        temp_mixer = temp_mixer + mixer
+ 
+    temp_sources = temp_sources / 10.0
+    temp_mixer = temp_mixer / 10.0
+
+    return (temp_mixer, temp_sources)
+    
