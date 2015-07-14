@@ -6,8 +6,9 @@ The preprocessing steps include demeaning and whitening.
 
 import numpy as np
 from numpy import dot
-from numpy.linalg import svd, matrix_rank, pinv
+from numpy.linalg import svd, matrix_rank, pinv, inv
 from numpy.random import permutation
+from scipy.linalg import eigh
 # Global constants
 EPS = 1e-18
 MAX_W = 1e8
@@ -15,8 +16,6 @@ ANNEAL = 0.9
 MAX_STEP = 500
 MIN_LRATE = 1e-6
 W_STOP = 1e-6
-
-# Scikit-learn like wrapper
 
 
 class ica:
@@ -53,22 +52,15 @@ def pca_whiten(x2d, n_comp, verbose=True):
     white : whitening matrix (Xwhite = np.dot(white,X))
     dewhite : dewhitening matrix (X = np.dot(dewhite,Xwhite))
     """
-    x2d = x2d - x2d.mean(axis=0)
-    cov = dot(x2d, x2d.T) / ( x2d.shape[1] -1)
-    w, v = np.linalg.eigh(cov)
-    total_var = sum(w)
-    idx = w.argsort()[::-1]
-    w = w[idx][:n_comp]#.reshape((n_comp,1))
-    v = v[:,idx][:,:n_comp]
-    partial_var = sum(w)
-    if verbose:
-        print('{}% variance retained with {} components'.format(
-            100 * partial_var / total_var, len(w)))
-    white = dot(np.diag(1.0 / np.sqrt(w)), v.T)
-    # white =  v.T * (1 / np.sqrt(w))
-    # dewhite = v * np.sqrt(w.T)
-    dewhite = dot(v, np.diag( np.sqrt(w)))
-    x_white = dot(white, x2d)
+    NSUB, NVOX = x2d.shape
+    x2d_demean = x2d - x2d.mean(axis=1).reshape((-1,1))
+    cov = dot(x2d_demean, x2d_demean.T) / ( x2d.shape[1] -1 )
+    w, v = eigh(cov,eigvals=(NSUB-n_comp,NSUB-1))
+    D = np.diag(1./(np.sqrt(w ) ))
+    white = dot(D,v.T)
+    D = np.diag( np.sqrt(w))
+    dewhite = dot(v,D)
+    x_white = dot(white,x2d_demean)
     return (x_white, white, dewhite)
 
 
@@ -89,7 +81,7 @@ def w_update(weights, x_white, bias1, lrate1):
     NVOX = x_white.shape[1]
     NCOMP = x_white.shape[0]
     block1 = int(np.floor(np.sqrt(NVOX / 3)))
-    # ib1 = np.ones((1, block1))
+    ib1 = np.ones((1, block1))
     permute1 = permutation(NVOX)
     for start in range(0, NVOX, block1):
         if start + block1 < NVOX:
@@ -197,7 +189,7 @@ def infomax1(x_white, verbose=False):
         step = step + 1
 
     # A,S,W
-    return (pinv(weights), dot(weights, x_white), weights)
+    return (inv(weights), dot(weights, x_white), weights)
 
 # Single modality ICA
 
