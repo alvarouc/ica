@@ -8,6 +8,12 @@ from numpy import dot
 from numpy.linalg import svd, matrix_rank, pinv, inv
 from numpy.random import permutation
 from scipy.linalg import eigh
+
+# PYCUDA imports
+import pycuda.driver as cuda
+import pycuda.autoinit
+from pycuda.compiler import SourceModule
+
 # Global constants
 EPS = 1e-18
 MAX_W = 1e8
@@ -39,7 +45,7 @@ class ica:
         fit(x2d, self.n_comp)
         return(self.mix, self.sources)
 
-
+@profile
 def pca_whiten(x2d, n_comp, verbose=True):
     """ data Whitening
     *Input
@@ -61,7 +67,7 @@ def pca_whiten(x2d, n_comp, verbose=True):
     x_white = dot(white,x2d_demean)
     return (x_white, white, dewhite)
 
-
+@profile
 def w_update(weights, x_white, bias1, lrate1):
     """ Update rule for infomax
     This function recieves parameters to update W1
@@ -122,6 +128,7 @@ def w_update(weights, x_white, bias1, lrate1):
 
 
 # infomax1: single modality infomax
+@profile
 def infomax1(x_white, verbose=False):
     """Computes ICA infomax in whitened data
     Decomposes x_white as x_white=AS
