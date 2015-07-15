@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 import time
 
 # Define matrix dimensions
-Nobs = 225 # Number of observation
-Nvars = 37838 # Number of variables
-Ncomp = 10 # Number of components
+Nobs = 1000 # Number of observation
+Nvars = 50000 # Number of variables
+Ncomp = 100 # Number of components
 
 # Simulated true sources
 S_true = np.random.logistic(0,1,(Ncomp,Nvars))
