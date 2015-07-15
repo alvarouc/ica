@@ -3,7 +3,6 @@ Independent Component Analysis (ICA):
 This script computes ICA using the INFOMAX criteria.
 The preprocessing steps include demeaning and whitening.
 '''
-
 import numpy as np
 from numpy import dot
 from numpy.linalg import svd, matrix_rank, pinv, inv
@@ -16,7 +15,6 @@ ANNEAL = 0.9
 MAX_STEP = 500
 MIN_LRATE = 1e-6
 W_STOP = 1e-6
-
 
 class ica:
 

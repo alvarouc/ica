@@ -3,7 +3,6 @@ import unittest
 import ica
 import time
 
-
 def find_sources_order(S_true, S_estimated):
     NCOMP, NVOX = S_true.shape
     C = np.corrcoef(S_true, S_estimated)
