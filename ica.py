@@ -9,10 +9,25 @@ from numpy.linalg import svd, matrix_rank, pinv, inv
 from numpy.random import permutation
 from scipy.linalg import eigh
 
-# PYCUDA imports
-import pycuda.driver as cuda
-import pycuda.autoinit
-from pycuda.compiler import SourceModule
+# Theano Imports
+import theano.tensor as T
+import theano
+
+T_weights = T.fmatrix()
+T_p_x_white = T.fmatrix()
+T_bias = T.fcol()
+T_unmixed = T.dot(T_weights,T_p_x_white) + T_bias
+T_logit = 1 - 2 / (1 + T.exp(-T_unmixed))
+
+T_lrate = T.fscalar()
+T_block = T.fscalar()
+
+T_out =  T_weights +  T_lrate * T.dot(T_block * T.identity_like(T_weights) + T.dot(T_logit, T.transpose(T_unmixed)), T_weights)
+w_up_fun = theano.function([T_weights, T_p_x_white, T_bias, T_lrate, T_block],[ T_out, T_logit], allow_input_downcast=True)
+
+
+T_out = T.dot(T_weights,T.transpose(T_weights))/T_lrate
+cov_fun = theano.function([T_weights, T_lrate], T_out, allow_input_downcast=True)
 
 # Global constants
 EPS = 1e-18
@@ -45,7 +60,6 @@ class ica:
         fit(x2d, self.n_comp)
         return(self.mix, self.sources)
 
-@profile
 def pca_whiten(x2d, n_comp, verbose=True):
     """ data Whitening
     *Input
@@ -58,7 +72,8 @@ def pca_whiten(x2d, n_comp, verbose=True):
     """
     NSUB, NVOX = x2d.shape
     x2d_demean = x2d - x2d.mean(axis=1).reshape((-1,1))
-    cov = dot(x2d_demean, x2d_demean.T) / ( x2d.shape[1] -1 )
+    #cov = dot(x2d_demean, x2d_demean.T) / ( x2d.shape[1] -1 )
+    cov = cov_fun(x2d_demean, NVOX-1)
     w, v = eigh(cov,eigvals=(NSUB-n_comp,NSUB-1))
     D = np.diag(1./(np.sqrt(w ) ))
     white = dot(D,v.T)
@@ -87,6 +102,11 @@ def w_update(weights, x_white, bias1, lrate1):
     block1 = int(np.floor(np.sqrt(NVOX / 3)))
     ib1 = np.ones((1, block1))
     permute1 = permutation(NVOX)
+    p_x_white = x_white[:, permute1].astype(np.float32)
+
+    weights = weights.astype(np.float32)
+    bias1 = bias1.astype(np.float32)
+    #weights_gpu = theano.shared(weights,borrow=True)
     for start in range(0, NVOX, block1):
         if start + block1 < NVOX:
             tt2 = start + block1
@@ -94,12 +114,10 @@ def w_update(weights, x_white, bias1, lrate1):
             tt2 = NVOX
             block1 = NVOX - start
 
-        # unmixed = dot(weights, x_white[:, permute1[start:tt2]]) + \
-        #     dot(bias1, ib1[:, 0:block1])
-        unmixed = dot(weights, x_white[:, permute1[start:tt2]]) + bias1
-        logit = 1 - (2 / (1 + np.exp(-unmixed)))
-        weights = weights + lrate1 * dot(block1 * np.eye(NCOMP) +
-                                         dot(logit, unmixed.T), weights)
+        weights, logit = w_up_fun(weights, p_x_white[:,start:tt2],
+                                  bias1, lrate1, block1)
+
+        
         bias1 = bias1 + lrate1 * logit.sum(axis=1).reshape(bias1.shape)
         # Checking if W blows up
         if (np.isnan(weights)).any() or np.max(np.abs(weights)) > MAX_W:
@@ -128,7 +146,6 @@ def w_update(weights, x_white, bias1, lrate1):
 
 
 # infomax1: single modality infomax
-@profile
 def infomax1(x_white, verbose=False):
     """Computes ICA infomax in whitened data
     Decomposes x_white as x_white=AS
@@ -185,7 +202,7 @@ def infomax1(x_white, verbose=False):
             elif step == 1:
                 old_d_weights = np.copy(d_weigths)
 
-            if (verbose and step % 1 == 0) or change < W_STOP:
+            if (verbose and step % 10 == 0) or change < W_STOP:
                 print("Step %d: Lrate %.1e,"
                       "Wchange %.1e,"
                       "Angle %.2f" % (step, lrate,

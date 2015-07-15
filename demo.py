@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 
-@profile
+
 def main():
     # Define matrix dimensions
     Nobs = 1000 # Number of observation
