@@ -23,7 +23,7 @@ def main():
 
     start = time.time()
     A,S = ica1(X,Ncomp)
-    total = start - time.time()
+    total = time.time() - start
     print('total time: {}'.format(total))
     # compare if our estimates are accurate
     # correlate A with Atrue and take 
