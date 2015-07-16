@@ -61,7 +61,7 @@ def pca_whiten(x2d, n_comp, verbose=True):
     x_white = dot(white,x2d_demean)
     return (x_white, white, dewhite)
 
-
+@profile
 def w_update(weights, x_white, bias1, lrate1):
     """ Update rule for infomax
     This function recieves parameters to update W1
@@ -178,7 +178,7 @@ def infomax1(x_white, verbose=False):
             elif step == 1:
                 old_d_weights = np.copy(d_weigths)
 
-            if (verbose and step % 1 == 0) or change < W_STOP:
+            if (verbose and step % 10 == 0) or change < W_STOP:
                 print("Step %d: Lrate %.1e,"
                       "Wchange %.1e,"
                       "Angle %.2f" % (step, lrate,
