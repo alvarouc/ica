@@ -1,5 +1,5 @@
 # Import ica function
-from ica import ica
+from ica import ica1
 import numpy as np
 import matplotlib.pyplot as plt
 import time
@@ -21,7 +21,7 @@ def main():
     X = X + np.random.normal(0,1,X.shape)
     # apply ICA on X and ask for 2 components
 
-    model = ica(Ncomp)
+    model = ica1(Ncomp)
     
     start = time.time()
     A,S = model.fit(X)
