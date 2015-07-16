@@ -12,30 +12,7 @@ from scipy.linalg import eigh
 # Theano Imports
 import theano.tensor as T
 import theano
-
-T_weights = T.fmatrix()
-T_p_x_white = T.fmatrix()
-T_bias = T.fcol()
-T_lrate = T.fscalar()
-T_block = T.fscalar()
-
-T_unmixed = T.dot(T_weights,T_p_x_white) + T_bias
-T_logit = 1 - 2 / (1 + T.exp(-T_unmixed))
-
-T_out =  T_weights +  T_lrate * T.dot(T_block * T.identity_like(T_weights) + T.dot(T_logit, T.transpose(T_unmixed)), T_weights)
-#bias1 = bias1 + lrate1 * logit.sum(axis=1).reshape(bias1.shape)
-T_bias_out = T_bias + T_lrate * T.reshape(T_logit.sum(axis=1), (-1,1))
-T_max_w = T.max(T_weights)
-T_isnan = T.any(T.isnan(T_weights))
-w_up_fun = theano.function([T_weights, T_p_x_white, T_bias, T_lrate, T_block],
-                           [ T_out, T_bias_out, T_max_w, T_isnan],
-                           allow_input_downcast=True)
-
-
-T_out = T.dot(T_weights,T.transpose(T_weights))/T_lrate
-cov_fun = theano.function([T_weights, T_lrate], T_out, allow_input_downcast=True)
-
-
+from theano import shared
 
 # Global constants
 EPS = 1e-18
@@ -47,26 +24,43 @@ W_STOP = 1e-6
 
 class ica:
 
-    def __init__(n_comp=10):
-        self.mix = None
+    def __init__(self, n_comp=10):
+
+        # Theano initialization 
+        self.T_weights = shared(np.eye(n_comp, dtype=np.float32))
+        #T.addbroadcast(self.T_weights, 0)
+        self.T_bias = shared(np.ones((n_comp,1), dtype=np.float32))
+        
+        T_p_x_white = T.fmatrix()
+        T_lrate = T.fscalar()
+        T_block = T.fscalar()
+        T_unmixed = T.dot(self.T_weights,T_p_x_white) + T.addbroadcast(self.T_bias,1)
+        T_logit = 1 - 2 / (1 + T.exp(-T_unmixed))
+
+        T_out =  self.T_weights +  T_lrate * T.dot(T_block * T.identity_like(self.T_weights) + T.dot(T_logit, T.transpose(T_unmixed)), self.T_weights)
+        T_bias_out = self.T_bias + T_lrate * T.reshape(T_logit.sum(axis=1), (-1,1))
+        T_max_w = T.max(self.T_weights)
+        T_isnan = T.any(T.isnan(self.T_weights))
+
+        self.w_up_fun = theano.function([T_p_x_white, T_lrate, T_block],
+                                        [T_max_w, T_isnan],
+                                        updates=[(self.T_weights, T_out),
+                                                 (self.T_bias, T_bias_out)],
+                                        allow_input_downcast=True)
+
+        #T_out = T.dot(T_weights,T.transpose(T_weights))/T_lrate
+        #self.cov_fun = theano.function([T_weights, T_lrate], T_out, allow_input_downcast=True)
+
+        
+        self.loading = None
         self.sources = None
-        self.unmix = None
+        self.weights = None
         self.n_comp = n_comp
 
-    def fit(x2d, n_comp):
-        self.mix, self.sources, self.unmix = ica1(x2d, self.n_comp)
+    def fit(self, x2d):
+        self.loading, self.sources, self.weights = ica1(x2d, self.n_comp, self.T_weights, self.T_bias, self.w_up_fun)
+        return(self.loading, self.sources)
 
-    def transform(x2d):
-        if not self.unmix:
-            print('Run fit method first')
-        else:
-            x_white, white, dewhite = pca_whiten(x2d, n_comp, verbose=False)
-            unmixed = dot(self.unmix, x_white)
-            return unmixed
-
-    def fit_transform(x2d):
-        fit(x2d, self.n_comp)
-        return(self.mix, self.sources)
 
 def pca_whiten(x2d, n_comp, verbose=True):
     """ data Whitening
@@ -80,8 +74,8 @@ def pca_whiten(x2d, n_comp, verbose=True):
     """
     NSUB, NVOX = x2d.shape
     x2d_demean = x2d - x2d.mean(axis=1).reshape((-1,1))
-    #cov = dot(x2d_demean, x2d_demean.T) / ( x2d.shape[1] -1 )
-    cov = cov_fun(x2d_demean, NVOX-1)
+    cov = dot(x2d_demean, x2d_demean.T) / ( x2d.shape[1] -1 )
+    #cov = cov_fun(x2d_demean, NVOX-1)
     w, v = eigh(cov,eigvals=(NSUB-n_comp,NSUB-1))
     D = np.diag(1./(np.sqrt(w ) ))
     white = dot(D,v.T)
@@ -91,7 +85,7 @@ def pca_whiten(x2d, n_comp, verbose=True):
     return (x_white, white, dewhite)
 
 @profile
-def w_update(weights, x_white, bias1, lrate1):
+def w_update(x_white, lrate1, T_weights, T_bias, w_up_fun):
     """ Update rule for infomax
     This function recieves parameters to update W1
     * Input
@@ -105,15 +99,13 @@ def w_update(weights, x_white, bias1, lrate1):
     bias: updated bias
     lrate1: updated learning rate
     """
+    error = 0
     NVOX = x_white.shape[1]
     NCOMP = x_white.shape[0]
     block1 = int(np.floor(np.sqrt(NVOX / 3)))
     permute1 = permutation(NVOX)
     p_x_white = x_white[:, permute1].astype(np.float32)
 
-    weights = weights.astype(np.float32)
-    bias1 = bias1.astype(np.float32)
-    
     for start in range(0, NVOX, block1):
         if start + block1 < NVOX:
             tt2 = start + block1
@@ -121,38 +113,34 @@ def w_update(weights, x_white, bias1, lrate1):
             tt2 = NVOX
             block1 = NVOX - start
 
-        weights, bias1, max_w, isnan = w_up_fun(weights,
-                                p_x_white[:,start:tt2],
-                                bias1, lrate1, block1)
+        max_w, isnan = w_up_fun(p_x_white[:,start:tt2], lrate1, block1)
 
         # Checking if W blows up
-    if isnan or max_w > MAX_W:
-        print "Numeric error! restarting with lower learning rate"
-        lrate1 = lrate1 * ANNEAL
-        weights = np.eye(NCOMP)
-        bias1 = np.zeros((NCOMP, 1))
-        error = 1
+        if isnan or max_w > MAX_W:
+            print "Numeric error! restarting with lower learning rate"
+            lrate1 = lrate1 * ANNEAL
+            T_weights.set_value(np.eye(NCOMP, dtype=np.float32))
+            T_bias.set_value( np.zeros((NCOMP, 1), dtype=np.float32))
+            error = 1
 
-        if lrate1 > 1e-6 and \
-           matrix_rank(x_white) < NCOMP:
-            print("Data 1 is rank defficient"
-                  ". I cannot compute " +
-                  str(NCOMP) + " components.")
-            return (None, None, None, 1)
+            if lrate1 > 1e-6 and \
+               matrix_rank(x_white) < NCOMP:
+                print("Data 1 is rank defficient"
+                      ". I cannot compute " +
+                      str(NCOMP) + " components.")
+                return (0, 1)
 
-        if lrate1 < 1e-6:
-            print("Weight matrix may"
-                  " not be invertible...")
-            return (None, None, None, 1)
+            if lrate1 < 1e-6:
+                print("Weight matrix may"
+                      " not be invertible...")
+                return (0, 1)
         
-    else:
-        error = 0
 
-    return(weights, bias1, lrate1, error)
+    return(lrate1, error)
 
 
 # infomax1: single modality infomax
-def infomax1(x_white, verbose=False):
+def infomax1(x_white,  T_weights, T_bias, w_up_fun, verbose=False):
     """Computes ICA infomax in whitened data
     Decomposes x_white as x_white=AS
     *Input
@@ -163,14 +151,15 @@ def infomax1(x_white, verbose=False):
     S : source matrix
     W : unmixing matrix
     """
-    NCOMP = x_white.shape[0]
+    
+    NCOMP = x_white.shape[0]    
     # Initialization
-    weights = np.eye(NCOMP)
+    T_weights.set_value( np.eye(NCOMP, dtype=np.float32))
     old_weights = np.eye(NCOMP)
     d_weigths = np.zeros(NCOMP)
     old_d_weights = np.zeros(NCOMP)
     lrate = 0.005 / np.log(NCOMP)
-    bias = np.zeros((NCOMP, 1))
+    T_bias.set_value(np.zeros((NCOMP, 1), dtype=np.float32))
     change = 1
     angle_delta = 0
     if verbose:
@@ -179,19 +168,20 @@ def infomax1(x_white, verbose=False):
 
     while step < MAX_STEP and change > W_STOP:
 
-        (weights, bias, lrate, error) = w_update(weights, x_white, bias, lrate)
+        (lrate, error) = w_update( x_white, lrate, T_weights, T_bias, w_up_fun)
 
         if error != 0:
             step = 1
             error = 0
             lrate = lrate * ANNEAL
-            weights = np.eye(NCOMP)
+            T_weights.set_value( np.eye(NCOMP, dtype=np.float32))
+            # weights = np.eye(NCOMP)
             old_weights = np.eye(NCOMP)
             d_weigths = np.zeros(NCOMP)
             old_d_weights = np.zeros(NCOMP)
-            bias = np.zeros((NCOMP, 1))
+            T_bias.set_value(np.zeros((NCOMP, 1), dtype=np.float32))
         else:
-            d_weigths = weights - old_weights
+            d_weigths = T_weights.get_value() - old_weights
             change = np.linalg.norm(d_weigths, 'fro')**2
 
             if step > 2:
@@ -200,7 +190,7 @@ def infomax1(x_white, verbose=False):
                                         (np.linalg.norm(old_d_weights, 'fro')))
                 angle_delta = angle_delta * 180 / np.pi
 
-            old_weights = np.copy(weights)
+            old_weights = np.copy(T_weights.get_value())
 
             if angle_delta > 60:
                 lrate = lrate * ANNEAL
@@ -217,12 +207,12 @@ def infomax1(x_white, verbose=False):
         step = step + 1
 
     # A,S,W
-    return (inv(weights), dot(weights, x_white), weights)
+    return (inv(T_weights.get_value()), dot(T_weights.get_value(), x_white), T_weights.get_value())
 
 # Single modality ICA
 
 
-def ica1(x_raw, ncomp, verbose=True):
+def ica1(x_raw, ncomp, T_weights, T_bias, w_up_fun, verbose=True):
     '''
     Single modality Independent Component Analysis
     '''
@@ -233,11 +223,11 @@ def ica1(x_raw, ncomp, verbose=True):
         print "Done."
     if verbose:
         print "Running INFOMAX-ICA ..."
-    mixer, sources, _ = infomax1(x_white, verbose)
+    mixer, sources, weights = infomax1(x_white,  T_weights, T_bias, w_up_fun, verbose)
     mixer = dot(dewhite, mixer)
     if verbose:
         print "Done."
-    return (mixer, sources)
+    return (mixer, sources, weights)
 
 
 def icax(x_raw, ncomp, verbose=True):

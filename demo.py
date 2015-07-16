@@ -1,5 +1,5 @@
 # Import ica function
-from ica import ica1
+from ica import ica
 import numpy as np
 import matplotlib.pyplot as plt
 import time
@@ -21,8 +21,10 @@ def main():
     X = X + np.random.normal(0,1,X.shape)
     # apply ICA on X and ask for 2 components
 
+    model = ica(Ncomp)
+    
     start = time.time()
-    A,S = ica1(X,Ncomp)
+    A,S = model.fit(X)
     total = time.time() - start
     print('total time: {}'.format(total))
     # compare if our estimates are accurate
