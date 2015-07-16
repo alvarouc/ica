@@ -23,11 +23,16 @@ T_unmixed = T.dot(T_weights,T_p_x_white) + T_bias
 T_logit = 1 - 2 / (1 + T.exp(-T_unmixed))
 
 T_out =  T_weights +  T_lrate * T.dot(T_block * T.identity_like(T_weights) + T.dot(T_logit, T.transpose(T_unmixed)), T_weights)
-w_up_fun = theano.function([T_weights, T_p_x_white, T_bias, T_lrate, T_block],[ T_out, T_logit], allow_input_downcast=True)
+#bias1 = bias1 + lrate1 * logit.sum(axis=1).reshape(bias1.shape)
+T_bias_out = T_bias + T_lrate * T.reshape(T_logit.sum(axis=1), (-1,1))
+
+w_up_fun = theano.function([T_weights, T_p_x_white, T_bias, T_lrate, T_block],[ T_out, T_bias_out], allow_input_downcast=True)
 
 
 T_out = T.dot(T_weights,T.transpose(T_weights))/T_lrate
 cov_fun = theano.function([T_weights, T_lrate], T_out, allow_input_downcast=True)
+
+
 
 # Global constants
 EPS = 1e-18
@@ -114,11 +119,10 @@ def w_update(weights, x_white, bias1, lrate1):
             tt2 = NVOX
             block1 = NVOX - start
 
-        weights, logit = w_up_fun(weights, p_x_white[:,start:tt2],
+        weights, bias1 = w_up_fun(weights, p_x_white[:,start:tt2],
                                   bias1, lrate1, block1)
 
-        
-        bias1 = bias1 + lrate1 * logit.sum(axis=1).reshape(bias1.shape)
+        #bias1 = bias1 + lrate1 * logit.sum(axis=1).reshape(bias1.shape)
         # Checking if W blows up
         if (np.isnan(weights)).any() or np.max(np.abs(weights)) > MAX_W:
             print "Numeric error! restarting with lower learning rate"
