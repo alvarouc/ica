@@ -16,11 +16,11 @@ import theano
 T_weights = T.fmatrix()
 T_p_x_white = T.fmatrix()
 T_bias = T.fcol()
-T_unmixed = T.dot(T_weights,T_p_x_white) + T_bias
-T_logit = 1 - 2 / (1 + T.exp(-T_unmixed))
-
 T_lrate = T.fscalar()
 T_block = T.fscalar()
+
+T_unmixed = T.dot(T_weights,T_p_x_white) + T_bias
+T_logit = 1 - 2 / (1 + T.exp(-T_unmixed))
 
 T_out =  T_weights +  T_lrate * T.dot(T_block * T.identity_like(T_weights) + T.dot(T_logit, T.transpose(T_unmixed)), T_weights)
 w_up_fun = theano.function([T_weights, T_p_x_white, T_bias, T_lrate, T_block],[ T_out, T_logit], allow_input_downcast=True)
@@ -82,7 +82,7 @@ def pca_whiten(x2d, n_comp, verbose=True):
     x_white = dot(white,x2d_demean)
     return (x_white, white, dewhite)
 
-#@profile
+@profile
 def w_update(weights, x_white, bias1, lrate1):
     """ Update rule for infomax
     This function recieves parameters to update W1
