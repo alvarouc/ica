@@ -35,4 +35,8 @@ def main():
     print "Accuracy of estimated mixing: %.2f"%aCorr
 
 if __name__=="__main__":
+
+    import theano.sandbox.cuda
+    theano.sandbox.cuda.use('gpu2')
+
     main()

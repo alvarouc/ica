@@ -26,7 +26,7 @@ class ica1(object):
     """
     Infomax ICA for one data modality
     """
-    def __init__(self, n_comp=10, verbose=True):
+    def __init__(self, n_comp=10, verbose=False):
 
         # Theano initialization 
         self.T_weights = shared(np.eye(n_comp, dtype=np.float32))
@@ -157,9 +157,10 @@ class ica1(object):
         self.T_bias.set_value(np.zeros((NCOMP, 1), dtype=np.float32))
         change = 1
         angle_delta = 0
+        step = 1
         if self.verbose:
             print "Beginning ICA training..."
-            step = 1
+        
             
         while step < MAX_STEP and change > W_STOP:
 
