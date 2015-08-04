@@ -113,7 +113,7 @@ class ica1(object):
                 
                 # Checking if W blows up
             if isnan or max_w > MAX_W:
-                print "Numeric error! restarting with lower learning rate"
+                print("Numeric error! restarting with lower learning rate")
                 lrate1 = lrate1 * ANNEAL
                 self.T_weights.set_value(np.eye(NCOMP, dtype=np.float32))
                 self.T_bias.set_value( np.zeros((NCOMP, 1), dtype=np.float32))
@@ -159,7 +159,7 @@ class ica1(object):
         angle_delta = 0
         step = 1
         if self.verbose:
-            print "Beginning ICA training..."
+            print("Beginning ICA training...")
         
             
         while step < MAX_STEP and change > W_STOP:
@@ -210,16 +210,16 @@ class ica1(object):
         Single modality Independent Component Analysis
         '''
         if self.verbose:
-            print "Whitening data..."
+            print("Whitening data...")
         x_white, _, dewhite = self.__pca_whiten(x_raw)
         if self.verbose:
-            print "Done."
-            print "Running INFOMAX-ICA ..."
+            print("Done.")
+            print("Running INFOMAX-ICA ...")
         loading, self.sources, self.weights = self.__infomax(x_white)
 
         self.loading = dot(dewhite, loading)
         if self.verbose:
-            print "Done."
+            print("Done.")
         return (self.loading, self.sources)
 
 
