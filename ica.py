@@ -194,7 +194,8 @@ class ica1(object):
                 elif step == 1:
                     old_d_weights = np.copy(d_weigths)
 
-                if (self.verbose and step % 10 == 0) or change < W_STOP:
+                if (self.verbose and step % 10 == 0) or\
+                (self.verbose and change < W_STOP):
                     print("Step %d: Lrate %.1e,"
                           "Wchange %.1e,"
                           "Angle %.2f" % (step, lrate,
