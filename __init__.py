@@ -1,1 +1,2 @@
-from .ica import ica1 
+from .ica import ica
+#from .ica_gpu import ica_gpu
