@@ -8,7 +8,7 @@ from numpy import dot
 from numpy.linalg import matrix_rank, inv
 from numpy.random import permutation
 from scipy.linalg import eigh
-from sklearn.decomposition import FastICA
+
 # Global constants
 EPS = 1e-18
 MAX_W = 1e8
