@@ -41,22 +41,26 @@ def pca_whiten(x2d, n_comp, verbose=True):
     white : whitening matrix (Xwhite = np.dot(white,X))
     dewhite : dewhitening matrix (X = np.dot(dewhite,Xwhite))
     """
-    NSUB, NVOX = x2d.shape
     x2d_demean = x2d - x2d.mean(axis=1).reshape((-1, 1))
     samples, features = x2d_demean.shape
+    M = min((samples, features))
     if samples > features:
         cov = dot(x2d_demean.T, x2d_demean) / (x2d.shape[0] - 1)
-        w, v = eigh(cov, eigvals=(NVOX-n_comp, NVOX-1))
-        u = dot(dot(x2d_demean,v),np.diag(1. / (np.sqrt(w)) + np.finfo(float).eps ))
+        w, v = eigh(cov, eigvals=(M-n_comp, M-1))
+        Di = np.diag(1. / (np.sqrt(w)) + np.finfo(float).eps )
+        u = dot(dot(x2d_demean,v),Di)
         x_white = v.T
-        white = dot(np.diag(1. / (np.sqrt(w)) + np.finfo(float).eps ), u.T)
-        dewhite = dot(u, np.diag(np.sqrt(w) + np.finfo(float).eps ))
+        D = np.diag(1. / (np.sqrt(w)) + np.finfo(float).eps )
+        white = dot(D, u.T)
+        dewhite = dot(u, D)
     else:
         cov = dot(x2d_demean, x2d_demean.T) / (x2d.shape[1] - 1)
-        w, u = eigh(cov, eigvals=(NSUB-n_comp, NSUB-1))
-        white = dot(np.diag(1. / (np.sqrt(w)) + np.finfo(float).eps ), u.T)
+        w, u = eigh(cov, eigvals=(M-n_comp, M-1))
+        Di = np.diag(1. / (np.sqrt(w)) + np.finfo(float).eps )        
+        white = dot(Di, u.T)
         x_white = dot(white, x2d_demean)
-        dewhite = dot(u, np.diag(np.sqrt(w) + np.finfo(float).eps ))
+        D = np.diag(1. / (np.sqrt(w)) + np.finfo(float).eps )        
+        dewhite = dot(u, D)
     return (x_white, white, dewhite)
 
 
