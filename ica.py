@@ -31,6 +31,14 @@ class ica:
         return(self.mix, self.sources)
 
 
+def diagsqrts(w):
+    """
+    Returns direct and inverse square root normalization matrices
+    """
+    Di = np.diag(1. / (np.sqrt(w)) + np.finfo(float).eps )
+    D = np.diag(np.sqrt(w) + np.finfo(float).eps )
+    return D, Di
+
 def pca_whiten(x2d, n_comp, verbose=True):
     """ data Whitening
     *Input
@@ -47,19 +55,17 @@ def pca_whiten(x2d, n_comp, verbose=True):
     if samples > features:
         cov = dot(x2d_demean.T, x2d_demean) / (x2d.shape[0] - 1)
         w, v = eigh(cov, eigvals=(M-n_comp, M-1))
-        Di = np.diag(1. / (np.sqrt(w)) + np.finfo(float).eps )
+        D, Di = diagsqrts(w)
         u = dot(dot(x2d_demean,v),Di)
         x_white = v.T
-        D = np.diag(1. / (np.sqrt(w)) + np.finfo(float).eps )
-        white = dot(D, u.T)
+        white = dot(Di, u.T)
         dewhite = dot(u, D)
     else:
         cov = dot(x2d_demean, x2d_demean.T) / (x2d.shape[1] - 1)
         w, u = eigh(cov, eigvals=(M-n_comp, M-1))
-        Di = np.diag(1. / (np.sqrt(w)) + np.finfo(float).eps )        
+        D, Di = diagsqrts(w)        
         white = dot(Di, u.T)
         x_white = dot(white, x2d_demean)
-        D = np.diag(1. / (np.sqrt(w)) + np.finfo(float).eps )        
         dewhite = dot(u, D)
     return (x_white, white, dewhite)
 
