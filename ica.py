@@ -189,6 +189,7 @@ def ica1(x_raw, ncomp, verbose=False):
         print("Whitening data...")
     x_white, _, dewhite = pca_whiten(x_raw, ncomp)
     if verbose:
+        print('x_white shape: %d, %d' % x_white.shape)
         print("Done.")
     if verbose:
         print("Running INFOMAX-ICA ...")
