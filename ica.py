@@ -35,9 +35,10 @@ def diagsqrts(w):
     """
     Returns direct and inverse square root normalization matrices
     """
-    Di = np.diag(1. / (np.sqrt(w)) + np.finfo(float).eps )
-    D = np.diag(np.sqrt(w) + np.finfo(float).eps )
+    Di = np.diag(1. / (np.sqrt(w) + np.finfo(float).eps))
+    D = np.diag(np.sqrt(w))
     return D, Di
+
 
 def pca_whiten(x2d, n_comp, verbose=True):
     """ data Whitening
@@ -56,7 +57,7 @@ def pca_whiten(x2d, n_comp, verbose=True):
         cov = dot(x2d_demean.T, x2d_demean) / (x2d.shape[0] - 1)
         w, v = eigh(cov, eigvals=(M-n_comp, M-1))
         D, Di = diagsqrts(w)
-        u = dot(dot(x2d_demean,v),Di)
+        u = dot(dot(x2d_demean, v), Di)
         x_white = v.T
         white = dot(Di, u.T)
         dewhite = dot(u, D)
