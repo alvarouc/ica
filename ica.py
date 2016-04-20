@@ -136,6 +136,8 @@ def infomax1(x_white, verbose=False):
         print("Beginning ICA training...")
     step = 1
 
+    norm = lambda x: np.linalg.norm(x.ravel()) 
+
     while step < MAX_STEP and change > W_STOP:
 
         (weights, bias, lrate, error) = w_update(weights, x_white, bias, lrate)
@@ -151,12 +153,11 @@ def infomax1(x_white, verbose=False):
             bias = np.zeros((NCOMP, 1))
         else:
             d_weigths = weights - old_weights
-            change = np.linalg.norm(d_weigths.ravel())**2
+            change = norm(d_weigths)**2
 
             if step > 2:
                 angle_delta = np.arccos(np.sum(d_weigths * old_d_weights) /
-                                        np.sqrt((d_weigths**2).sum()) /
-                                        np.sqrt((old_d_weights**2).sum()))
+                                        ( norm(d_weigths) * norm(old_d_weights) + 1e-8 ) )
                 angle_delta = angle_delta * 180 / np.pi
 
             old_weights = np.copy(weights)
