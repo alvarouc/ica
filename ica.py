@@ -151,12 +151,12 @@ def infomax1(x_white, verbose=False):
             bias = np.zeros((NCOMP, 1))
         else:
             d_weigths = weights - old_weights
-            change = np.linalg.norm(d_weigths, 'fro')**2
+            change = np.linalg.norm(d_weigths.ravel())**2
 
             if step > 2:
                 angle_delta = np.arccos(np.sum(d_weigths * old_d_weights) /
-                                        (np.linalg.norm(d_weigths, 'fro')) /
-                                        (np.linalg.norm(old_d_weights, 'fro')))
+                                        np.sqrt((d_weigths**2).sum()) /
+                                        np.sqrt((old_d_weights**2).sum()))
                 angle_delta = angle_delta * 180 / np.pi
 
             old_weights = np.copy(weights)

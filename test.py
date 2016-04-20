@@ -3,6 +3,7 @@ import unittest
 import ica
 import time
 
+
 def find_sources_order(S_true, S_estimated):
     NCOMP, NVOX = S_true.shape
     C = np.corrcoef(S_true, S_estimated)
@@ -91,7 +92,7 @@ class test_ica_methods(unittest.TestCase):
     def test_ICA_infomax_clean(self):
 
         start = time.time()
-        A, S = ica.ica1(self.clean_data, self.NCOMP)
+        A, S, _ = ica.ica1(self.clean_data, self.NCOMP)
         end = time.time()
         print('\ttime: {}:.2f'.format(end - start))
 
