@@ -39,17 +39,20 @@ class test_ica_methods(unittest.TestCase):
         self.sources = np.random.logistic(0, 1, (self.NCOMP, self.NVOX))
         self.loading = np.random.normal(0, 1, (self.NSUB, self.NCOMP))
         self.clean_data = np.dot(self.loading, self.sources)
-        self.clean_data = self.clean_data - self.clean_data.mean(axis=1).reshape((-1, 1))
+        self.clean_data = self.clean_data - \
+            self.clean_data.mean(axis=1).reshape((-1, 1))
         # self.clean_data = self.clean_data - self.clean_data.mean(axis=0)
-        self.noisy_data = self.clean_data + np.random.normal(0, 1, self.clean_data.shape)
-        self.noisy_data = self.noisy_data - self.noisy_data.mean(axis=1).reshape((-1, 1))
+        self.noisy_data = self.clean_data + \
+            np.random.normal(0, 1, self.clean_data.shape)
+        self.noisy_data = self.noisy_data - \
+            self.noisy_data.mean(axis=1).reshape((-1, 1))
         # self.noisy_data = self.noisy_data - self.clean_data.mean(axis=0)
 
     def test_PCA_whitening_clean(self):
         start = time.time()
         x_white, white, dewhite = ica.pca_whiten(self.clean_data, self.NCOMP)
         end = time.time()
-        print('\ttime: {:.2f} seconds'.format(end - start))
+        print('\tPCA whitening time: {:.2f} seconds'.format(end - start))
         # Check output dimensions
         self.assertEqual(x_white.shape, (self.NCOMP, self.NVOX))
         self.assertEqual(white.shape, (self.NCOMP, self.NSUB))
@@ -61,13 +64,15 @@ class test_ica_methods(unittest.TestCase):
 
         # Test wether the covariance of x_white is the identity
         cov = auto_cov(x_white)
-        self.assertLess(np.linalg.norm(cov - np.eye(self.NCOMP)) / self.NCOMP / self.NCOMP, 1e-6)
+        self.assertLess(np.linalg.norm(cov - np.eye(self.NCOMP)
+                                       ) / self.NCOMP / self.NCOMP, 1e-6)
         # Test wether white and dewhite are orthogonals
         eye = np.dot(white, dewhite)
-        self.assertLess(np.linalg.norm(eye - np.eye(self.NCOMP)) / self.NCOMP / self.NCOMP, 1e-4)
+        self.assertLess(np.linalg.norm(eye - np.eye(self.NCOMP)
+                                       ) / self.NCOMP / self.NCOMP, 1e-4)
         eye = np.dot(dewhite, white)
-        self.assertLess(np.linalg.norm(eye - np.eye(self.NSUB)) / self.NSUB / self.NSUB, 1e-4)
-
+        self.assertLess(np.linalg.norm(eye - np.eye(self.NSUB)
+                                       ) / self.NSUB / self.NSUB, 1e-4)
 
     # @unittest.skip("PCAwhiten not passing")
     def test_PCA_whitening_noisy(self):
@@ -80,13 +85,16 @@ class test_ica_methods(unittest.TestCase):
         self.assertEqual(dewhite.shape, (self.NSUB, self.NCOMP))
 
         cov = auto_cov(x_white)
-        self.assertLess(np.linalg.norm(cov - np.eye(self.NCOMP)) / self.NCOMP / self.NCOMP, 1e-6)
+        self.assertLess(np.linalg.norm(cov - np.eye(self.NCOMP)
+                                       ) / self.NCOMP / self.NCOMP, 1e-6)
 
         # Test wether white and dewhite are orthogonals
         eye = np.dot(white, dewhite)
-        self.assertLess(np.linalg.norm(eye - np.eye(self.NCOMP)) / self.NCOMP / self.NCOMP, 1e-4)
+        self.assertLess(np.linalg.norm(eye - np.eye(self.NCOMP)
+                                       ) / self.NCOMP / self.NCOMP, 1e-4)
         eye = np.dot(dewhite, white)
-        self.assertLess(np.linalg.norm(eye - np.eye(self.NSUB)) / self.NSUB / self.NSUB, 1e-4)
+        self.assertLess(np.linalg.norm(eye - np.eye(self.NSUB)
+                                       ) / self.NSUB / self.NSUB, 1e-4)
 
     # @unittest.skip("PCAwhiten not passing")
     def test_ICA_infomax_clean(self):
@@ -99,7 +107,6 @@ class test_ica_methods(unittest.TestCase):
         # Check right dimensions of Output
         self.assertEqual(A.shape, (self.NSUB, self.NCOMP))
         self.assertEqual(S.shape, (self.NCOMP, self.NVOX))
-
 
         idx = find_sources_order(self.sources, S)
         S = S[idx, :]
