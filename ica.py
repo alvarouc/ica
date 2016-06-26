@@ -8,9 +8,10 @@ from numpy import dot
 from numpy.linalg import matrix_rank, inv
 from numpy.random import permutation
 from scipy.linalg import eigh
+from scipy.linalg import norm as mnorm
 
 # Global constants
-EPS = 1e-18
+EPS = 1e-16
 MAX_W = 1e8
 ANNEAL = 0.9
 MAX_STEP = 500
@@ -18,17 +19,25 @@ MIN_LRATE = 1e-6
 W_STOP = 1e-6
 
 
+def norm(x):
+    """Computes the norm of a vector or the Frobenius norm of a
+    matrix_rank
+
+    """
+    return mnorm(x.ravel())
+
+
 class ica:
 
     def __init__(self, n_components=10):
-        self.mix = None
-        self.sources = None
-        self.unmix = None
         self.n_comp = n_components
 
     def fit(self, x2d):
-        self.mix, self.sources, self.unmix = ica1(x2d, self.n_comp)
-        return(self.mix, self.sources)
+        x_white, self.white, self.dewhite\
+            = pca_whiten(x2d, self.ncomp)
+        self.mix, self.sources, self.unmix\
+            = infomax1(x_white, self.n_comp)
+        return self
 
 
 def diagsqrts(w):
@@ -51,20 +60,19 @@ def pca_whiten(x2d, n_comp, verbose=True):
     dewhite : dewhitening matrix (X = np.dot(dewhite,Xwhite))
     """
     x2d_demean = x2d - x2d.mean(axis=1).reshape((-1, 1))
-    samples, features = x2d_demean.shape
-    M = min((samples, features))
-    if samples > features:
-        cov = dot(x2d_demean.T, x2d_demean) / (x2d.shape[0] - 1)
-        w, v = eigh(cov, eigvals=(M-n_comp, M-1))
+    NSUB, NVOX = x2d_demean.shape
+    if NSUB > NVOX:
+        cov = dot(x2d_demean.T, x2d_demean) / (NSUB - 1)
+        w, v = eigh(cov, eigvals=(NVOX - n_comp, NVOX - 1))
         D, Di = diagsqrts(w)
         u = dot(dot(x2d_demean, v), Di)
         x_white = v.T
         white = dot(Di, u.T)
         dewhite = dot(u, D)
     else:
-        cov = dot(x2d_demean, x2d_demean.T) / (x2d.shape[1] - 1)
-        w, u = eigh(cov, eigvals=(M-n_comp, M-1))
-        D, Di = diagsqrts(w)        
+        cov = dot(x2d_demean, x2d_demean.T) / (NVOX - 1)
+        w, u = eigh(cov, eigvals=(NSUB - n_comp, NSUB - 1))
+        D, Di = diagsqrts(w)
         white = dot(Di, u.T)
         x_white = dot(white, x2d_demean)
         dewhite = dot(u, D)
@@ -85,8 +93,7 @@ def w_update(weights, x_white, bias1, lrate1):
     bias: updated bias
     lrate1: updated learning rate
     """
-    NVOX = x_white.shape[1]
-    NCOMP = x_white.shape[0]
+    NCOMP, NVOX = x_white.shape
     block1 = int(np.floor(np.sqrt(NVOX / 3)))
     permute1 = permutation(NVOX)
     for start in range(0, NVOX, block1):
@@ -96,8 +103,6 @@ def w_update(weights, x_white, bias1, lrate1):
             tt2 = NVOX
             block1 = NVOX - start
 
-        # unmixed = dot(weights, x_white[:, permute1[start:tt2]]) + \
-        #     dot(bias1, ib1[:, 0:block1])
         unmixed = dot(weights, x_white[:, permute1[start:tt2]]) + bias1
         logit = 1 - (2 / (1 + np.exp(-unmixed)))
         weights = weights + lrate1 * dot(block1 * np.eye(NCOMP) +
@@ -129,6 +134,8 @@ def w_update(weights, x_white, bias1, lrate1):
     return(weights, bias1, lrate1, error)
 
 # infomax1: single modality infomax
+
+
 def infomax1(x_white, verbose=False):
     """Computes ICA infomax in whitened data
     Decomposes x_white as x_white=AS
@@ -169,13 +176,13 @@ def infomax1(x_white, verbose=False):
             bias = np.zeros((NCOMP, 1))
         else:
             d_weigths = weights - old_weights
-            change = np.linalg.norm(d_weigths, 'fro')**2
+            change = norm(d_weigths)**2
 
             if step > 2:
-                angle_delta = np.arccos(np.sum(d_weigths * old_d_weights) /
-                                        (np.linalg.norm(d_weigths, 'fro')) /
-                                        (np.linalg.norm(old_d_weights, 'fro')))
-                angle_delta = angle_delta * 180 / np.pi
+                angle_delta = np.arccos(
+                    np.sum(d_weigths * old_d_weights) /
+                    (norm(d_weigths) * norm(old_d_weights) + 1e-8)
+                ) * 180 / np.pi
 
             old_weights = np.copy(weights)
 
@@ -185,7 +192,7 @@ def infomax1(x_white, verbose=False):
             elif step == 1:
                 old_d_weights = np.copy(d_weigths)
 
-            if (verbose and step % 1 == 0) or change < W_STOP:
+            if verbose and change < W_STOP:
                 print("Step %d: Lrate %.1e,"
                       "Wchange %.1e,"
                       "Angle %.2f" % (step, lrate,
@@ -215,9 +222,9 @@ def ica1(x_raw, ncomp, verbose=False):
     mixer = dot(dewhite, mixer)
 
     scale = sources.std(axis=1).reshape((-1, 1))
-    sources = sources/scale
+    sources = sources / scale
     scale = scale.reshape((1, -1))
-    mixer = mixer*scale
+    mixer = mixer * scale
 
     if verbose:
         print("Done.")
