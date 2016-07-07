@@ -35,10 +35,11 @@ class test_ica_methods(unittest.TestCase):
 
         self.NCOMP = 100
         self.NVOX = 50000
-        self.NSUB = 1000
-        self.sources = np.random.logistic(0, 1, (self.NCOMP, self.NVOX))
-        self.loading = np.random.normal(0, 1, (self.NSUB, self.NCOMP))
-        self.clean_data = np.dot(self.loading, self.sources)
+        self.NSUB = 500
+        # Setting up X = A @ S
+        self.S = np.random.logistic(0, 1, (self.NCOMP, self.NVOX))
+        self.A = np.random.normal(0, 1, (self.NSUB, self.NCOMP))
+        self.clean_data = np.dot(self.A, self.S)
         self.clean_data = self.clean_data - \
             self.clean_data.mean(axis=1).reshape((-1, 1))
         # self.clean_data = self.clean_data - self.clean_data.mean(axis=0)
@@ -108,12 +109,12 @@ class test_ica_methods(unittest.TestCase):
         self.assertEqual(A.shape, (self.NSUB, self.NCOMP))
         self.assertEqual(S.shape, (self.NCOMP, self.NVOX))
 
-        idx = find_sources_order(self.sources, S)
+        idx = find_sources_order(self.S, S)
         S = S[idx, :]
         A = A[:, idx]
         # Check the accuracy of output
-        self.assertGreater(mean_corr(self.sources, S), 0.95)
-        self.assertGreater(mean_corr(self.loading, A), 0.95)
+        self.assertGreater(mean_corr(self.S, S), 0.95)
+        self.assertGreater(mean_corr(self.A, A), 0.95)
 
 
 if __name__ == '__main__':
