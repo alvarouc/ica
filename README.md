@@ -8,8 +8,8 @@ http://sccn.ucsd.edu/~scott/ica.html
     pip install ica
 
 ## How to use
-   from ica import ica1
-   A,S,W = ica1(X, n_components)
+    from ica import ica1
+    A,S,W = ica1(X, n_components)
 
 Where, ica1 is the infomax ICA in function format. The input `X` is a numpy array and `n_components` is the number of components to estimate
 
