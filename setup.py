@@ -1,8 +1,8 @@
 from distutils.core import setup
 
 setup(
-    name='ica-mrn',
-    packages=['ica-mrn'],
+    name='ica',
+    packages=['ica'],
     description='Independent component analysis with INFOMAX algorithm',
     version='0.1',
     url='https://github.com/alvarouc/ica/',
