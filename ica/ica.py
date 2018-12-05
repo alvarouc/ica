@@ -34,7 +34,7 @@ class ica:
 
     def fit(self, x2d):
         x_white, self.white, self.dewhite\
-            = pca_whiten(x2d, self.ncomp)
+            = pca_whiten(x2d, self.n_comp)
         self.mix, self.sources, self.unmix\
             = infomax1(x_white, self.n_comp)
         return self
