@@ -7,7 +7,7 @@ import numpy as np
 from numpy import dot
 from numpy.linalg import matrix_rank, inv
 from numpy.random import permutation
-from scipy.linalg import eigh
+from scipy.linalg import svd
 from scipy.linalg import norm as mnorm
 
 # Global constants
@@ -40,15 +40,6 @@ class ica:
         return self
 
 
-def diagsqrts(w):
-    """
-    Returns direct and inverse square root normalization matrices
-    """
-    Di = np.diag(1. / (np.sqrt(w) + np.finfo(float).eps))
-    D = np.diag(np.sqrt(w))
-    return D, Di
-
-
 def pca_whiten(x2d, n_comp, verbose=True):
     """ data Whitening
     *Input
@@ -59,23 +50,19 @@ def pca_whiten(x2d, n_comp, verbose=True):
     white : whitening matrix (Xwhite = np.dot(white,X))
     dewhite : dewhitening matrix (X = np.dot(dewhite,Xwhite))
     """
-    x2d_demean = x2d - x2d.mean(axis=1).reshape((-1, 1))
-    NSUB, NVOX = x2d_demean.shape
-    if NSUB > NVOX:
-        cov = dot(x2d_demean.T, x2d_demean) / (NSUB - 1)
-        w, v = eigh(cov, eigvals=(NVOX - n_comp, NVOX - 1))
-        D, Di = diagsqrts(w)
-        u = dot(dot(x2d_demean, v), Di)
-        x_white = v.T
-        white = dot(Di, u.T)
-        dewhite = dot(u, D)
-    else:
-        cov = dot(x2d_demean, x2d_demean.T) / (NVOX - 1)
-        w, u = eigh(cov, eigvals=(NSUB - n_comp, NSUB - 1))
-        D, Di = diagsqrts(w)
-        white = dot(Di, u.T)
-        x_white = dot(white, x2d_demean)
-        dewhite = dot(u, D)
+    x2d_demean = x2d - x2d.mean(axis=1, keepdims=True)
+    NVOX = x2d_demean.shape[1]
+
+    u, s, _ = svd(x2d_demean)
+    u = u[:,:n_comp]
+    s = s[:n_comp] / np.sqrt(NVOX - 1)
+
+    D = np.diag(s)
+    Di = np.diag(1. / (s + np.finfo(float).eps))
+
+    white = dot(Di, u.T)
+    x_white = dot(white, x2d_demean)
+    dewhite = dot(u, D)
     return (x_white, white, dewhite)
 
 
